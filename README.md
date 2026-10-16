@@ -136,6 +136,6 @@ bookkeeping, or batching more games per call. -->
   the `Judge` network (upstream `ConvNet` with 2 input channels instead of 1), the
   structure of `train_judge.py` (adapted from upstream `main.py`), and `save_checkpoint` /
   `mkdir_p`.
-* PUCT selection follows AlphaGo Zero / AlphaZero (Silver et al., 2017).
 
-If you use this repository, please reference it. MIT License, see [`LICENSE`](LICENSE).
+
+If you use this repository, please reference it.
