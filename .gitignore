@@ -1,0 +1,6 @@
+dev/
+data/
+checkpoint/
+*__pycache__*
+profiles/
+.pytest_cache/
