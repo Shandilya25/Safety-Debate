@@ -8,11 +8,7 @@ honesty is the winning strategy, a judge that cannot verify answers itself can s
 true answers. The paper's MNIST experiment makes this concrete. A judge classifier sees only
 a handful of pixels. Two agents take turns choosing which pixels to reveal: an honest agent
 that wants the judge to output the true digit, and a liar that wants it to be wrong. The
-question is how much debate improves the judge over seeing the same number of random pixels.
-
-This repository implements that experiment: judge training, and debates played by Monte
-Carlo tree search (MCTS) agents. It started from an unmaintained prototype whose search did
-not work (see [Changes from the original implementation](#changes-from-the-original-implementation));
+question is how much debate improves the judge over seeing the same number of random pixels(see [Changes from the original implementation](#changes-from-the-original-implementation));
 the original code is kept unchanged in [`legacy/`](legacy/) for comparison.
 
 ## Debate architecture
@@ -27,7 +23,7 @@ image, label ──► │ move i: mover = first if i even else second          
                  judge(mask, values) ─► argmax ─► honest wins iff prediction == label
 ```
 
-* **Judge** ([`safe_debates/judge.py`](safe_debates/judge.py)): a CNN that takes a
+<!-- * **Judge** ([`safe_debates/judge.py`](safe_debates/judge.py)): a CNN that takes a
   `(2, 28, 28)` input, where channel 0 is the reveal mask and channel 1 the revealed pixel
   values. It is trained by [`train_judge.py`](train_judge.py) on `k` nonzero pixels chosen
   uniformly at random.
@@ -46,7 +42,7 @@ image, label ──► │ move i: mover = first if i even else second          
   * Nodes are keyed by (game, set of revealed pixels), so transpositions share statistics.
   * All `B` games in a batch are searched together, with one batched judge call per rollout.
 * **Debate** ([`safe_debates/debate.py`](safe_debates/debate.py)): alternates the agents,
-  builds the final judge input and scores both agents.
+  builds the final judge input and scores both agents. -->
 
 ## Repository structure
 
@@ -81,20 +77,6 @@ python train_judge.py --pixels 6 --seed 4224 --checkpoint-filename 6px
 python train_judge.py --pixels 4 --batches 50000 --seed 4224 --checkpoint-filename 4px
 ```
 
-Training is a single pass over `--batches` freshly sampled batches. The model is
-validated once at the end, saved to `<checkpoint>/<name>-best.pth.tar`, and then tested.
-
-| option | default | meaning |
-| --- | --- | --- |
-| `--pixels` | required | nonzero pixels revealed per training sample |
-| `--batch-size` / `--eval-batch-size` | 128 / 1000 | training / evaluation batch size |
-| `--batches` | 30000 | training batches |
-| `--val-batches` / `--test-batches` | 4 / 800 | evaluation batches (validation is drawn from the training split) |
-| `--lr` | 1e-4 | Adam learning rate |
-| `--workers` | 1 | DataLoader workers. More is faster (see Performance) but changes the pixels drawn for a given seed |
-| `--seed` | None | seeds Python, NumPy and torch; runs are bit-reproducible on a fixed machine and worker count |
-| `--checkpoint` / `--checkpoint-filename` | `./checkpoint/` / datetime | output location |
-| `--log-interval`, `--data-folder`, `--no-cuda` | | |
 
 ## Running debates
 
@@ -103,29 +85,7 @@ python main.py --pixels 6 --checkpoint checkpoint/6px-best.pth.tar --no-precommi
                --batch-size 32 --rollouts 1000 --rounds 10 --seed 0
 ```
 
-It prints the honest agent's win rate per round, then the overall and per-digit rates.
-Without precommit, the honest win rate equals the judge's accuracy on the debated pixels.
-
-| option | default | meaning |
-| --- | --- | --- |
-| `--pixels` | required | total pixels revealed per debate (should match the judge) |
-| `--checkpoint` | required | judge checkpoint from `train_judge.py` |
-| `--no-precommit` | off | **currently required**: precommit is not implemented and the script exits without it |
-| `--rollouts` | 10000 | MCTS rollouts per move |
-| `--c-puct` | 1.0 | PUCT exploration constant |
-| `--batch-size` | 128 | debates played simultaneously |
-| `--rounds` | 10000 // batch size | batches of debates (MNIST test split, shuffled) |
-| `--honest-first` | off | honest agent moves first (default: liar first) |
-| `--seed`, `--no-cuda`, `--data-folder` | | |
-| `--progress` | off | progress bar over rollouts |
-| `--profile` | off | write cProfile stats to `./profiles/` (the original always profiled) |
-
-Cost scales as rollouts × moves × batched judge calls. On a 14-thread CPU, one 4-pixel
-first move takes about 65 s for one game at 10,000 rollouts, and about 4 s for 128 games
-at 100 rollouts. A full run at the defaults (128 × 10,000) is a multi-day CPU job, so
-use a GPU or fewer rollouts.
-
-## Changes from the original implementation
+<!-- ## Changes from the original implementation
 
 The original MCTS never worked, so the refactor had to settle what "intended behaviour"
 means. Each fix below is the smallest change consistent with the code's evident intent:
@@ -134,59 +94,9 @@ names such as `N`, `Q`, `P` and `calculate_UCT`, the comments, and the paper.
 original's own style: recursive rollouts, and a dict keyed by flattened state tensors.
 The optimized search is tested to give **identical** moves and root visit counts to that
 reference (`tests/test_mcts.py::test_matches_reference`). Defects in the original are
-pinned down by tests in `tests/test_legacy_parity.py`.
+pinned down by tests in `tests/test_legacy_parity.py`. -->
 
-**Search (the original's debates were degenerate):**
-1. *Statistics were never stored.* `self.Q[states][:, a] = ...` assigns into the temporary
-   tensor returned by `BatchDict.__getitem__`. In the profiles, `__missing__` runs on every
-   lookup (e.g. 140,000,400 of 140,000,400). N and Q stayed zero, so every move was action 0.
-2. *Exploration was disabled.* `calculate_UCT` divided by the number of revealed pixels,
-   which gives NaN at the root, and `break_ties` returned an argmax *index* that was then
-   added to Q as a constant. Now: PUCT with a uniform prior over valid actions and random
-   tie-breaking, with `c_puct` exposed (default 1, matching the original's absent constant).
-3. *Rollouts corrupted the root.* `apply_action` mutated the state in place, so every rollout
-   revealed more pixels in the real game state. It also swapped row and column, and with
-   B > 1 wrote every game's action into every game. States are now never mutated.
-4. *Channel aliasing.* The initial state was `zeros(...).expand(-1, 2, -1, -1)`, so the
-   mask and value channels shared memory.
-5. *Action space.* Valid actions were computed over both channels (1568 entries), so
-   actions ≥ 784 indexed outside the image. Invalid actions could also win the argmax,
-   because masking was done by multiplying by 0. Actions are now the 784 pixels, with
-   invalid ones masked to −∞.
-6. *Depth and sign.* Rollouts always went `pixels + 1` moves deep from any position, and
-   the negamax sign at the root was wrong for even `pixels`. Rollouts now end when the
-   debate ends, and the searcher's levels back up `+w`.
-7. *Shared roots.* Keys were state contents only, so all games in a batch shared the
-   (empty) root's statistics. Keys now include the game index.
-8. `choose_moves` could select an invalid action. It now takes the most-visited *valid*
-   action (first index on ties, as `torch.max` did).
-
-**Data and training:**
-9. `SparseMNIST` used `sparse[~mask] = 0` with a uint8 mask. That was a logical NOT on
-   PyTorch 0.4, but is bitwise or an error on current PyTorch. Values are now `img * mask`.
-   The pixel sampling call is unchanged, so a seed draws the same pixels as the original
-   (tested).
-10. Current torchvision looks for a subclass's data under `root/SparseMNIST/`, which
-    would download a second copy of MNIST. `SparseMNIST` now reads `root/MNIST/`.
-11. `train_judge.py` crashed at test time with `--val-batches 0` (no `-best` file); it
-    now always saves the final model as best. Deprecated `size_average=False` became
-    `reduction='sum'`. Datetime checkpoint names no longer contain `:` (invalid on Windows).
-
-**Evaluation:**
-12. `main.py`: added the missing `numpy` import (it crashed with `--seed`), `map_location`
-    for checkpoint loading, and a fail-fast for precommit. Previously the default run crashed
-    with a `TypeError` in `track_stats_with` after the first round.
-13. Per-digit accuracy counted every sample in the batch in each digit's denominator, and
-    the total counted each sample twice. Now: total = mean honest win rate, and digit d's
-    rate is computed over samples labelled d.
-
-**Unchanged on purpose:**
-* The judge architecture, including the missing ReLU after `hidden`, inherited from
-  cle-mnist, so that checkpoints and reported accuracies stay valid.
-* Single-pass training and one validation at the end.
-* A fresh search tree per move, liar first by default, and default hyperparameters.
-
-## Performance
+<!-- ## Performance
 
 Measured on this repository's development machine (Windows 11, CPU only, torch 2.4.0,
 14 intra-op threads). The machine was noisy: repeated runs varied by up to about 2×.
@@ -219,45 +129,8 @@ per move. One game at 10,000 rollouts runs at about 150 rollouts/s.
 
 At B=1, the remaining search cost is mostly fixed per-op overhead of small torch ops, plus
 the judge forward (about 40% under the profiler). Possible next steps are NumPy for B=1
-bookkeeping, or batching more games per call.
+bookkeeping, or batching more games per call. -->
 
-## Experimental results
-
-**Judge (sparse classifier on random pixels).** These were reported by the original
-author on PyTorch 0.4. Judge training was unaffected by the search bugs, though
-`--val-batches` affects which file is tested.
-
-Density | Accuracy | Average Cross-Entropy
---- | --- | ---
-6px | 57.4% | 1.1948
-4px | 46.7% | 1.4775
-
-Rerun with the refactored code (torch 2.4, CPU, 54 min): `python train_judge.py --pixels 6
---seed 4224 --checkpoint-filename 6px` gives **57.35%** test accuracy and **1.1982** average
-cross-entropy on 800,000 test samples. That matches the original to within sampling noise.
-The 4px judge was not rerun.
-
-**Debates (small-scale sanity check, not a full experiment).** Run with the 6px judge
-above, no precommit, liar first, 300 rollouts per move, and 192 test images (3 rounds × 64,
-`--seed 0`). The honest agent won **96.4%** of debates, against the judge's 57.35% on 6
-random pixels. This is the first working debate result in this repository: the original
-never produced meaningful debates (see above). Full-scale runs (10,000 rollouts, all
-10,000 test images, precommit) have not been done.
-
-## Known limitations and open TODOs
-
-* **Precommit is not implemented** (missing feature). This is the paper's main setting:
-  each agent commits to a label, and the judge picks between the two claims. `main.py`
-  requires `--no-precommit`. `Agent.precommit_` and `Debate.evaluate` raise
-  `NotImplementedError` if commits are set.
-* No agent learning: agents are pure search against a fixed judge, as in the paper's MNIST
-  experiment.
-* A fresh tree per move (subtree reuse would be an algorithmic change).
-* The judge architecture deviates from the TF tutorial; see above.
-* Validation runs once, at the end of training, so "best" checkpoint selection is trivial.
-* Exact numbers from the original runs cannot be reproduced bit-for-bit: the legacy code
-  does not run on current PyTorch, and RNG streams differ across PyTorch versions.
-* The GPU path has not been tested.
 
 ## References and attribution
 
