@@ -8,7 +8,7 @@ honesty is the winning strategy, a judge that cannot verify answers itself can s
 true answers. The paper's MNIST experiment makes this concrete. A judge classifier sees only
 a handful of pixels. Two agents take turns choosing which pixels to reveal: an honest agent
 that wants the judge to output the true digit, and a liar that wants it to be wrong. The
-question is how much debate improves the judge over seeing the same number of random pixels(see [Changes from the original implementation](#changes-from-the-original-implementation));
+question is how much debate improves the judge over seeing the same number of random pixels(see [Changes from the original implementation](#[changes-from-the-original-implementation](https://github.com/jvmncs/safe-debates/tree/master)));
 the original code is kept unchanged in [`legacy/`](legacy/) for comparison.
 
 ## Debate architecture
