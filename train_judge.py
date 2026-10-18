@@ -42,7 +42,7 @@ def main(args):
     model = Judge().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    print('\n================== TRAINING ==================')
+    print('\n================= TRAINING =================')
     model.train()
     correct = 0
     train_num = args.batches * args.batch_size
@@ -78,7 +78,7 @@ def main(args):
         print('\nValidation set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
             val_loss, val_correct, val_num, val_acc))
         state.update(val_loss=val_loss, val_acc=val_acc)
-    # training runs for a single pass, so the final model is the only (hence best) candidate
+
     save_checkpoint(state, True, checkpoint_file)
 
     print('\n================== TESTING ==================')
