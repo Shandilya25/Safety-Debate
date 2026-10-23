@@ -23,7 +23,6 @@ class Agent(object):
             raise NotImplementedError('precommit debates are not implemented')
         moves, _ = self.mcts.search(judge, images, labels, revealed, self.pixels, self.honest)
         return moves
-
     def precommit_(self, commits, opponent_commits):
         self.commits = commits
         self.opponent_commits = opponent_commits
