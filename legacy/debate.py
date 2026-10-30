@@ -24,7 +24,6 @@ class Debate(object):
         #     self.commit_delta = 1
         # else:
         #     self.commit_delta = None
-        
     def play(self, judge, device):
         self.images, self.labels = next(self.iterator)
         self.images = self.images.to(device)
