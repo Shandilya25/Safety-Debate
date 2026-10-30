@@ -3,7 +3,7 @@ import shutil
 import torch
 
 class BatchDict(dict):
-    """A dict-like that takes care of batching with key-dependent defaults"""
+    """A dict-like that takes care of batching with key-dependent default"""
     def __init__(self, device, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._get = super(self.__class__, self).__getitem__
@@ -30,7 +30,7 @@ class BatchDict(dict):
         return tuple(key.contiguous().view(-1).tolist())
 
 class AverageMeter(object):
-    """Computes and stores the average and current value"""
+    """Computes and stores the average, current value"""
     def __init__(self):
         self.reset()
 
@@ -47,7 +47,6 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 def track_stats_(total_meter, class_meters, preds, wins, labels, precommit):
-    """Track stats"""
     if precommit:
         track_stats_with(total_meter, class_meters, preds, wins, labels)
     else:
@@ -67,7 +66,6 @@ def track_stats_without(total_meter, class_meters, preds, wins, labels):
 def track_stats_with(total_meter, class_meters, wins, labels):
     """Track stats with precommit"""
     raise NotImplementedError
-
 def mkdir_p(path):
     '''make dir if not exist'''
     try:
@@ -77,7 +75,6 @@ def mkdir_p(path):
             pass
         else:
             raise
-
 def save_checkpoint(state, is_best, title, filename='checkpoint.pth.tar'):
     filepath = title + '-' + filename
     torch.save(state, filepath)
