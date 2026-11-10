@@ -34,10 +34,9 @@ class Agent(object):
             self.N[states][:, action] += 1
 
         return -Vs
-
     def simulate_(self, judge, roots, images, labels):
         """
-        Performs a certain number of rollouts from the root of a vectorized set of debate trees.
+        Performs a certain number of rollouts from the root of a vectorized set of debate tree.
         """
         for i in tqdm.tqdm(range(self.rollouts)):
             self.rollout_(judge, roots, images, labels, level=0)
